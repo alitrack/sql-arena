@@ -1,0 +1,20 @@
+/** Verifies the degraded (insecure-context) path actually works end to end. */
+import { chromium } from 'playwright';
+const PORT = process.env.PORT ?? '8791';
+const url = process.env.URL ?? `http://10.10.10.81:${PORT}/public/warehouse.html`;
+const b = await chromium.launch();
+const p = await b.newPage();
+const errs = [];
+p.on('pageerror', e => errs.push(e.message.slice(0,140)));
+await p.goto(url, {waitUntil:'load'});
+await p.waitForFunction(() => !!window.__wh);
+console.log('caps:', JSON.stringify(await p.evaluate(() => window.__wh.caps())));
+console.log('init:', await p.evaluate(() => window.__wh.init()));
+await p.evaluate(() => window.__wh.write(1000));
+console.log('count:', await p.evaluate(() => window.__wh.count()));
+console.log('tables:', await p.evaluate(() => window.__wh.tables()));
+console.log('migrations:', await p.evaluate(() => window.__wh.userVersion()));
+console.log('flush:', await p.evaluate(() => window.__wh.flush()));
+console.log('export:', await p.evaluate(() => window.__wh.exportSize()));
+console.log('errors:', errs.length ? errs.join(' | ') : 'none');
+await b.close();

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Local-first warehouse spike (OPFS + cross-tab)</title>
+<style>
+  body { font: 13px/1.5 ui-monospace, SFMono-Regular, monospace; margin: 20px; max-width: 980px; }
+  h1 { font: 600 17px/1.3 system-ui, sans-serif; }
+  button { font: inherit; padding: 5px 12px; margin: 0 6px 6px 0; cursor: pointer; }
+  #out { background: #111; color: #d6d6d6; padding: 10px; border-radius: 6px; min-height: 160px; white-space: pre-wrap; }
+  .ok { color: #7ee787; }
+</style>
+</head>
+<body>
+<h1>本地优先运行时 spike</h1>
+<p>
+  同一个 origin 下开两个标签页：第一个拿到 OPFS 写锁成为 leader，第二个自动降级为 client 并通过
+  BroadcastChannel 代理 SQL。关掉 leader 后 client 接管。
+</p>
+<p id="caps" style="padding:8px 12px;border-radius:6px;background:#f0f7ff;border-left:3px solid #4c78a8"></p>
+<button id="init">初始化 / 接管</button>
+<button id="write">写入 1000 行 + 等待空闲 checkpoint</button>
+<button id="read">读取行数</button>
+<button id="export">导出 .duckdb 字节数</button>
+<button id="close">关闭（释放锁）</button>
+<div id="out"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "apache-arrow": "/node_modules/apache-arrow/Arrow.dom.mjs",
+    "apache-arrow/": "/node_modules/apache-arrow/",
+    "tslib": "/node_modules/tslib/tslib.es6.mjs",
+    "flatbuffers": "/node_modules/flatbuffers/mjs/flatbuffers.js"
+  }
+}
+</script>
+<script type="module" src="./warehouse-demo.js"></script>
+</body>
+</html>

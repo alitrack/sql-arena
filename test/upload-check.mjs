@@ -1,0 +1,14 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch();
+const p = await b.newPage();
+const errs=[]; p.on('pageerror', e=>errs.push(e.message.slice(0,150)));
+await p.goto('http://10.10.10.81:8791/public/arena.html', {waitUntil:'load'});
+await p.waitForFunction(() => !!window.__arena);
+await p.setInputFiles('#files', 'test/fixtures/sales.csv');
+await p.waitForTimeout(500);
+console.log('schema:', JSON.stringify(await p.evaluate(() => window.__arena.datasets())));
+const sql = `SELECT customer, amount, is_paid FROM sales WHERE amount > 500 ORDER BY amount DESC`;
+const res = await p.evaluate(q => window.__arena.runSql(q), sql);
+for (const r of res) console.log(`${r.name.padEnd(20)} ok=${r.ok} ${r.ok? r.ms.toFixed(1)+'ms rows='+r.rows+' '+JSON.stringify(r.firstRows) : 'ERR '+String(r.error).slice(0,80)}`);
+console.log('errors:', errs.length?errs.join('|'):'none');
+await b.close();

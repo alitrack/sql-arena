@@ -1,0 +1,6 @@
+order_id,customer,amount,ordered_at,is_paid,note
+1,"Acme, Inc",1500.50,2024-01-05,true,"first, paid"
+2,Beta Corp,220.00,2024-01-07,false,unpaid
+3,"Gamma ""G"" Ltd",9999.99,2024-02-11,true,
+4,Delta,75.25,2024-02-14,true,"refund, partial"
+5,Epsilon,100.00,2024-03-01,false,

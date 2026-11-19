@@ -1,0 +1,27 @@
+import { chromium } from 'playwright';
+const PORT = process.env.PORT ?? '8791';
+const url = `https://10.10.10.81:${PORT}/public/warehouse.html`;
+const b = await chromium.launch();
+const ctx = await b.newContext({ ignoreHTTPSErrors: true });
+const errors = [];
+const open = async () => {
+  const p = await ctx.newPage();
+  p.on('pageerror', e => errors.push(e.message.slice(0,120)));
+  await p.goto(url, {waitUntil:'load'});
+  await p.waitForFunction(() => !!window.__wh);
+  return p;
+};
+const t1 = await open();
+console.log('tab1:', await t1.evaluate(() => window.__wh.init()));
+await t1.evaluate(() => window.__wh.write(500));
+await t1.evaluate(() => window.__wh.flush());
+const t2 = await open();
+console.log('tab2:', await t2.evaluate(() => window.__wh.init()));
+console.log('tab2 sees rows:', await t2.evaluate(() => window.__wh.count()));
+await t1.evaluate(() => window.__wh.close());
+await t1.close();
+await t2.waitForTimeout(400);
+console.log('tab2 promoted:', await t2.evaluate(async () => { await window.__wh.close().catch(()=>{}); return window.__wh.init(); }));
+console.log('tab2 rows after takeover:', await t2.evaluate(() => window.__wh.count()));
+console.log('errors:', errors.length ? errors.slice(0,2).join(' | ') : 'none');
+await b.close();

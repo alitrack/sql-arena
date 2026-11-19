@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DuckDB-Wasm vs SQLite vs PGlite — 同页同 SQL 对比</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; margin: 24px; max-width: 1100px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.lead { color: #666; margin: 0 0 20px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0 24px; }
+  th, td { border: 1px solid #d0d0d0; padding: 6px 10px; text-align: right; font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; }
+  th { background: #f5f5f5; font-weight: 600; }
+  tr.pending td { color: #999; }
+  .engine { font-weight: 600; }
+  .ok { color: #157f3d; }
+  .err { color: #b42318; }
+  #log { font: 12px/1.45 ui-monospace, monospace; background: #111; color: #ddd; padding: 10px; border-radius: 6px; max-height: 220px; overflow: auto; white-space: pre-wrap; }
+  button { font: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid #888; background: #fff; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .bar { height: 10px; background: #4c78a8; border-radius: 3px; }
+  td.num { position: relative; }
+  .note { color: #666; font-size: 12px; }
+  /* Narrow screens: let the wide results table scroll on its own instead of
+     pushing the whole page sideways. */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 12px 0 24px; }
+  .table-scroll table { margin: 0; min-width: 620px; }
+  @media (max-width: 640px) {
+    body { margin: 14px; font-size: 13px; }
+    h1 { font-size: 17px; }
+    th, td { padding: 5px 7px; white-space: nowrap; }
+    #log { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<h1>DuckDB-Wasm / SQLite-Wasm / PGlite 同页对比</h1>
+<p class="lead">
+  同一份数据（TPC-H lineitem 20 万行 CSV，25 MB）、同一套 SQL 语义，在浏览器里分别导入并执行。
+  所有引擎都在同一个标签页、同一个 origin、无服务端参与。
+</p>
+
+<button id="run" disabled>开始对比</button>
+<span class="note" id="status">初始化中…</span> <span class="note">数据量：<b id="dssize">—</b></span>
+
+<div class="table-scroll">
+<table id="results">
+  <thead>
+    <tr>
+      <th>引擎</th>
+      <th>版本</th>
+      <th>导入 (ms)</th>
+      <th>Q1 聚合 (ms)</th>
+      <th>Q6 过滤 (ms)</th>
+      <th>Q1 三连 (ms)</th>
+      <th>内存占用</th>
+      <th>结果正确性</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id="row-duckdb" class="pending"><td class="engine">DuckDB-Wasm</td><td colspan="7">待运行</td></tr>
+    <tr id="row-sqlite" class="pending"><td class="engine">SQLite-Wasm</td><td colspan="7">待运行</td></tr>
+    <tr id="row-pglite" class="pending"><td class="engine">PGlite (Postgres)</td><td colspan="7">待运行</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="log"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "apache-arrow": "/node_modules/apache-arrow/Arrow.dom.mjs",
+    "apache-arrow/": "/node_modules/apache-arrow/",
+    "tslib": "/node_modules/tslib/tslib.es6.mjs",
+    "flatbuffers": "/node_modules/flatbuffers/mjs/flatbuffers.js"
+  }
+}
+</script>
+<script type="module" src="./compare.js"></script>
+</body>
+</html>
