@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."   # lab root, not scripts/
 mkdir -p data
 
 echo "==> TPC-H SF1 (6.0M lineitem rows)"
-"$DUCKDB" -c "SET extension_directory='$EXT_DIR'; LOAD tpch; CALL dbgen(sf=1);
+"$DUCKDB" -c "SET extension_directory='$EXT_DIR'; INSTALL tpch; LOAD tpch; CALL dbgen(sf=1);
   COPY lineitem TO 'data/lineitem_sf1.parquet' (FORMAT parquet, COMPRESSION snappy);
   COPY orders   TO 'data/orders_sf1.parquet'   (FORMAT parquet, COMPRESSION snappy);"
 
@@ -26,7 +26,7 @@ mkdir -p data/shards16
 } | "$DUCKDB"
 
 echo "==> Arena demo tables (5 CSVs the page loads on demand)"
-"$DUCKDB" -c "SET extension_directory='$EXT_DIR'; LOAD tpch; CALL dbgen(sf=1);
+"$DUCKDB" -c "SET extension_directory='$EXT_DIR'; INSTALL tpch; LOAD tpch; CALL dbgen(sf=1);
   COPY (SELECT * FROM orders   USING SAMPLE 20000 ROWS (reservoir, 42)) TO 'data/orders_20k.csv'   (FORMAT csv, HEADER);
   COPY (SELECT * FROM customer USING SAMPLE 20000 ROWS (reservoir, 42)) TO 'data/customer_20k.csv' (FORMAT csv, HEADER);
   COPY nation TO 'data/nation.csv' (FORMAT csv, HEADER);
@@ -44,7 +44,7 @@ echo "==> 200k-row CSV sample (used by the browser comparison page)"
 
 if [[ "${WITH_SF10:-0}" == "1" ]]; then
   echo "==> TPC-H SF10 (60M lineitem rows, ~2 GB) — slow"
-  "$DUCKDB" -c "SET extension_directory='$EXT_DIR'; LOAD tpch; CALL dbgen(sf=10);
+  "$DUCKDB" -c "SET extension_directory='$EXT_DIR'; INSTALL tpch; LOAD tpch; CALL dbgen(sf=10);
     COPY lineitem TO 'data/lineitem_sf10.parquet' (FORMAT parquet, COMPRESSION snappy);"
   mkdir -p data/shards_sf10
   {

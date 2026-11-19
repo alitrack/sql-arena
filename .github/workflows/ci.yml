@@ -1,0 +1,90 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# The arena is a static site; CI only needs to prove the three engines still
+# agree in a real browser. It deliberately avoids uploading artifacts: the
+# private-plan storage budget is shared account-wide and tiny.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  arena:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch wasm payloads
+        run: ./scripts/fetch-vendor.sh
+
+      # The demo tables come from TPC-H, which needs the duckdb binary plus its
+      # tpch extension. Downloading the extension here keeps the repo free of
+      # both the binary and the 200 MB dataset.
+      - name: Install duckdb CLI
+        run: |
+          curl -fsSL https://github.com/duckdb/duckdb/releases/download/v2.0.0/duckdb-cli-linux-amd64.tar.gz             | tar -xz -C /tmp
+          mkdir -p "$HOME/.local/bin"
+          mv /tmp/duckdb "$HOME/.local/bin/"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          duckdb --version
+
+      - name: Build demo data
+        env:
+          DUCKDB: duckdb
+          EXT_DIR: ${{ runner.temp }}/duckdb-ext
+          WITH_SF10: 0
+        run: ./scripts/make-data.sh
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start server
+        run: |
+          node test/server.mjs > server.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8791/public/arena.html > /dev/null; then
+              echo "server up"; break
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8791/public/arena.html > /dev/null
+
+      - name: Engines agree on a four-table join
+        env:
+          BASE: http://127.0.0.1:8791
+          PORT: 8791
+        run: node test/arena-test.mjs
+
+      - name: User-uploaded CSV works on all three engines
+        env:
+          BASE: http://127.0.0.1:8791
+          PORT: 8791
+        run: node test/upload-check.mjs
+
+      - name: Dialect matrix
+        env:
+          BASE: http://127.0.0.1:8791
+          PORT: 8791
+        run: node test/arena-matrix.mjs
+
+      - name: Server log on failure
+        if: failure()
+        run: tail -50 server.log || true
