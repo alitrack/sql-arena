@@ -17,6 +17,14 @@ test/                  Playwright 驱动 + 静态服务器
 report/                自包含 HTML 报告
 ```
 
+## 在线地址
+
+<https://alitrack.github.io/sql-arena/>
+
+托管在 GitHub Pages。首屏要下载 DuckDB 的 wasm（32 MB，Pages 不做 gzip），
+从中国大陆访问 GitHub CDN 实测只有 5–25 KB/s，首次打开需要数分钟；本地
+`npm run serve` 没有这个问题。页面本身是纯静态的，也可以直接用任意静态服务器托管。
+
 ## 快速开始
 
 ```sh
