@@ -25,6 +25,19 @@ mkdir -p data/shards16
   done
 } | "$DUCKDB"
 
+echo "==> Arena demo tables (5 CSVs the page loads on demand)"
+"$DUCKDB" -c "SET extension_directory='$EXT_DIR'; LOAD tpch; CALL dbgen(sf=1);
+  COPY (SELECT * FROM orders   USING SAMPLE 20000 ROWS (reservoir, 42)) TO 'data/orders_20k.csv'   (FORMAT csv, HEADER);
+  COPY (SELECT * FROM customer USING SAMPLE 20000 ROWS (reservoir, 42)) TO 'data/customer_20k.csv' (FORMAT csv, HEADER);
+  COPY nation TO 'data/nation.csv' (FORMAT csv, HEADER);
+  COPY region TO 'data/region.csv' (FORMAT csv, HEADER);"
+"$DUCKDB" -c "
+  COPY (SELECT l.l_orderkey, l.l_linenumber, l.l_quantity, l.l_extendedprice, l.l_discount, l.l_tax,
+               l.l_returnflag, l.l_shipdate, l.l_commitdate, l.l_receiptdate, l.l_shipmode
+        FROM 'data/lineitem_sf1.parquet' l
+        JOIN (SELECT o_orderkey FROM 'data/orders_20k.csv') o ON l.l_orderkey = o.o_orderkey)
+    TO 'data/lineitem_20k.csv' (FORMAT csv, HEADER);"
+
 echo "==> 200k-row CSV sample (used by the browser comparison page)"
 "$DUCKDB" -c "COPY (SELECT * FROM read_parquet('data/lineitem_sf1.parquet')
   USING SAMPLE 200000 ROWS (reservoir, 42)) TO 'data/lineitem_200k.csv' (FORMAT csv, HEADER);"

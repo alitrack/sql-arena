@@ -299,14 +299,7 @@ async function showExplain() {
 $('demo').onclick = async () => {
   try {
     setStatus('载入内置示例…');
-    for (const [name, url] of Object.entries(DEMO_FILES)) {
-      const text = await fetch(url).then((r) => {
-        if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
-        return r.text();
-      });
-      addDataset(name, text);
-    }
-    renderDatasets();
+    await window.__arena.loadDemo();
     setStatus('示例已载入');
   } catch (error) {
     setStatus('示例载入失败：' + String(error?.message ?? error));
@@ -338,7 +331,17 @@ window.__arena = {
   datasets: () => datasets.map((d) => ({ name: d.name, rows: d.rows.length, columns: d.columns })),
   loadDemo: async () => {
     for (const [name, url] of Object.entries(DEMO_FILES)) {
-      addDataset(name, await fetch(url).then((r) => r.text()));
+      const r = await fetch(url);
+      // A missing dataset used to surface as "column does not exist" because the
+      // 404 body was parsed as CSV. Fail with the actual cause instead.
+      if (!r.ok) {
+        throw new Error(`示例数据缺失：${url} (HTTP ${r.status})。先运行 ./scripts/make-data.sh`);
+      }
+      const text = await r.text();
+      if (/^\s*</.test(text)) {
+        throw new Error(`示例数据缺失：${url} 返回 HTML 而不是 CSV。先运行 ./scripts/make-data.sh`);
+      }
+      addDataset(name, text);
     }
     renderDatasets();
     return datasets.length;
