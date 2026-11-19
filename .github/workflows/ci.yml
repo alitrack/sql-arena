@@ -57,6 +57,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Start server
+        env:
+          HOST: 127.0.0.1
+          PORT: 8791
         run: |
           node test/server.mjs > server.log 2>&1 &
           for i in $(seq 1 40); do
