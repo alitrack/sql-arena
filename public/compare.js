@@ -4,9 +4,9 @@
  * Everything runs in this tab, same origin, no server: identical source data,
  * identical SQL semantics, per-engine dialect adjustments applied explicitly.
  */
-import * as duckdb from '/public/vendor/duckdb-browser.mjs';
+import * as duckdb from './vendor/duckdb-browser.mjs';
 
-const CSV_URL = '/data/lineitem_200k.csv';
+const CSV_URL = '../data/lineitem_200k.csv';
 // Repeat the source rows N times so the same page can show a size ladder.
 const REPEAT = Math.max(1, Number(new URLSearchParams(location.search).get('repeat') ?? 1));
 const logEl = document.getElementById('log');
@@ -111,8 +111,8 @@ const engines = {
   async duckdb(csvText) {
     const bundles = {
       base: {
-        mainModule: '/public/vendor/duckdb-base.wasm',
-        mainWorker: '/public/vendor/duckdb-browser-base.worker.js',
+        mainModule: './vendor/duckdb-base.wasm',
+        mainWorker: './vendor/duckdb-browser-base.worker.js',
       },
     };
     const bundle = await duckdb.selectBundle(bundles);
@@ -149,7 +149,7 @@ const engines = {
   },
 
   async sqlite(csvText) {
-    const { default: sqlite3InitModule } = await import('/node_modules/@sqlite.org/sqlite-wasm/dist/index.mjs');
+    const { default: sqlite3InitModule } = await import('../node_modules/@sqlite.org/sqlite-wasm/dist/index.mjs');
     const sqlite3 = await sqlite3InitModule();
     const db = new sqlite3.oo1.DB(':memory:', 'c');
     db.exec('CREATE TABLE li (l_quantity REAL, l_extendedprice REAL, l_discount REAL, '
@@ -188,7 +188,7 @@ const engines = {
   },
 
   async pglite(csvText) {
-    const { PGlite } = await import('/node_modules/@electric-sql/pglite/dist/index.js');
+    const { PGlite } = await import('../node_modules/@electric-sql/pglite/dist/index.js');
     const pg = new PGlite();
     await pg.waitReady;
     await pg.exec(`CREATE TABLE li (

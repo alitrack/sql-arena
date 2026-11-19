@@ -42,24 +42,28 @@ jobs:
           ./scripts/fetch-vendor.sh
           cp -r public/vendor dist/public/vendor
 
-          # Only these four packages are requested at runtime; copying the whole
+          # Only these five packages are requested at runtime; copying the whole
           # node_modules tree would ship ~120 MB of build-only dependencies.
-          mkdir -p dist/node_modules
+          mkdir -p dist/node_modules/@electric-sql dist/node_modules/@sqlite.org
           for pkg in apache-arrow flatbuffers tslib; do
             cp -r "node_modules/$pkg" "dist/node_modules/$pkg"
           done
-          mkdir -p dist/node_modules/@electric-sql dist/node_modules/@sqlite.org
           cp -r node_modules/@electric-sql/pglite dist/node_modules/@electric-sql/pglite
           cp -r node_modules/@sqlite.org/sqlite-wasm dist/node_modules/@sqlite.org/sqlite-wasm
 
-          # GitHub Pages runs Jekyll by default, which drops paths beginning
-          # with an underscore and can rewrite others; disable it.
+          # Pages runs Jekyll by default, which drops paths starting with an
+          # underscore; disable it.
           touch dist/.nojekyll
 
-          # The arena fetches its demo CSVs from /data; ship only the small ones.
+          # The site is served from /<repo>/, so the landing page lives at the
+          # dist root. Paths inside the pages are relative, which is what lets
+          # the same files work both at a domain root and under a prefix.
+          cp public/index.html dist/index.html
+
+          # The arena loads its demo tables from /data; ship only the small ones.
           mkdir -p dist/data
           for f in orders_20k.csv lineitem_20k.csv customer_20k.csv nation.csv region.csv; do
-            if [[ -f "data/$f" ]]; then cp "data/$f" "dist/data/"; fi
+            cp "data/$f" "dist/data/"
           done
 
       - name: Report the staged size

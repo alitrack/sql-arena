@@ -14,11 +14,15 @@ const quotePg = (id) => `"${id.replaceAll('"', '""')}"`;
 
 /* ------------------------------------------------------------------ DuckDB */
 async function createDuckDB() {
-  const duckdb = await import('/public/vendor/duckdb-browser.mjs');
+  const duckdb = await import('../public/vendor/duckdb-browser.mjs');
+  // DuckDB resolves these against the site root and drops leading `../`, so a
+  // relative string breaks under a path-prefixed deployment. Resolve them
+  // against this module's own URL instead.
+  const vendor = (f) => new URL(`../public/vendor/${f}`, import.meta.url).href;
   const bundle = await duckdb.selectBundle({
     base: {
-      mainModule: '/public/vendor/duckdb-base.wasm',
-      mainWorker: '/public/vendor/duckdb-browser-base.worker.js',
+      mainModule: vendor('duckdb-base.wasm'),
+      mainWorker: vendor('duckdb-browser-base.worker.js'),
     },
   });
   const worker = new Worker(bundle.mainWorker);
@@ -86,9 +90,11 @@ export class SQLiteEngine {
 
   async init() {
     const { default: sqlite3InitModule } = await import(
-      '/node_modules/@sqlite.org/sqlite-wasm/dist/index.mjs'
+      '../node_modules/@sqlite.org/sqlite-wasm/dist/index.mjs'
     );
-    this.sqlite3 = await sqlite3InitModule({ locateFile: (f) => `/public/vendor/${f}` });
+    this.sqlite3 = await sqlite3InitModule({
+      locateFile: (f) => new URL(`../public/vendor/${f}`, import.meta.url).href,
+    });
     this.db = new this.sqlite3.oo1.DB(':memory:');
     this.loaded = new Map();
     return this;
@@ -147,7 +153,7 @@ export class PGliteEngine {
   version = '18.6';
 
   async init() {
-    const { PGlite } = await import('/node_modules/@electric-sql/pglite/dist/index.js');
+    const { PGlite } = await import('../node_modules/@electric-sql/pglite/dist/index.js');
     this.pg = new PGlite();
     await this.pg.waitReady;
     this.loaded = new Map();

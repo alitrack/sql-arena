@@ -4,9 +4,9 @@
  * Flow: parse CSV once -> infer one schema -> hand the same schema to every
  * engine -> run the statement on all three -> compare rows and timing.
  */
-import { parseCsv, inferSchema } from '/src/csv-schema.js';
-import { ENGINES } from '/src/engines.js';
-import { compareResults, isOrdered } from '/src/result-compare.js';
+import { parseCsv, inferSchema } from '../src/csv-schema.js';
+import { ENGINES } from '../src/engines.js';
+import { compareResults, isOrdered } from '../src/result-compare.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -17,11 +17,11 @@ let engines = [];
 let busy = false;
 
 const DEMO_FILES = {
-  orders: '/data/orders_20k.csv',
-  lineitem: '/data/lineitem_20k.csv',
-  customer: '/data/customer_20k.csv',
-  nation: '/data/nation.csv',
-  region: '/data/region.csv',
+  orders: '../data/orders_20k.csv',
+  lineitem: '../data/lineitem_20k.csv',
+  customer: '../data/customer_20k.csv',
+  nation: '../data/nation.csv',
+  region: '../data/region.csv',
 };
 
 const EXAMPLES = {

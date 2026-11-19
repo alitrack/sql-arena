@@ -4,8 +4,8 @@
  * Exposes window.__wh so the Playwright driver can script the same flows a user
  * would click: init, write, read, export, close.
  */
-import * as duckdb from '/public/vendor/duckdb-browser.mjs';
-import { LocalWarehouse, capabilities } from '/src/warehouse.js';
+import * as duckdb from './vendor/duckdb-browser.mjs';
+import { LocalWarehouse, capabilities } from '../src/warehouse.js';
 
 const out = document.getElementById('out');
 const print = (line) => {
@@ -14,8 +14,8 @@ const print = (line) => {
 
 const BUNDLES = {
   base: {
-    mainModule: '/public/vendor/duckdb-base.wasm',
-    mainWorker: '/public/vendor/duckdb-browser-base.worker.js',
+    mainModule: './vendor/duckdb-base.wasm',
+    mainWorker: './vendor/duckdb-browser-base.worker.js',
   },
 };
 
