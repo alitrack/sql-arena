@@ -33,6 +33,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The demo tables are generated, not committed; the staging step copies
+      # them, so they must exist before it runs.
+      - name: Install duckdb CLI
+        run: |
+          curl -fsSL https://github.com/duckdb/duckdb/releases/download/v2.0.0/duckdb-cli-linux-amd64.tar.gz \
+            | tar -xz -C /tmp
+          mkdir -p "$HOME/.local/bin"
+          mv /tmp/duckdb "$HOME/.local/bin/"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build demo data
+        env:
+          DUCKDB: duckdb
+          EXT_DIR: ${{ runner.temp }}/duckdb-ext
+          WITH_SF10: 0
+        run: ./scripts/make-data.sh
+
       - name: Stage the site with the repo's own layout
         run: |
           set -euo pipefail
