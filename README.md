@@ -20,12 +20,24 @@ report/                自包含 HTML 报告
 ## 快速开始
 
 ```sh
-npm install --cache /tmp/npmcache
-./scripts/fetch-vendor.sh      # 拉 wasm 产物到 public/vendor（49MB，不入库）
-./scripts/serve.sh             # http://localhost:8791
+npm run setup                  # 安装依赖 + 拉 wasm 产物（49MB，不入库）
+npm run serve                  # http://localhost:8791
 ```
 
 打开 `http://localhost:8791/public/arena.html`。
+
+局域网/手机访问用 `npm run serve:lan`（自动选空端口并打印可点地址）。
+
+## 测试
+
+```sh
+npm run serve &                # 测试需要一个跑着的服务
+npm run test:arena             # 三引擎跑同一句四表 JOIN，断言结果一致
+npm run test:matrix            # 六种查询形态 + 方言差异矩阵
+npm run test:upload            # 用户上传自定义 CSV
+```
+
+Playwright 1.61.1 已钉住；首次使用需 `npx playwright install chromium`。
 
 ## 为什么值得做：它会拦住三类假结论
 

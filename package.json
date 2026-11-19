@@ -1,10 +1,18 @@
 {
-  "name": "duckdb-wasm-lab",
+  "name": "sql-arena",
   "version": "1.0.0",
-  "description": "",
+  "description": "Run the same SQL on DuckDB, SQLite and PGlite in one browser page. Bring your own data and SQL.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "setup": "npm install && ./scripts/fetch-vendor.sh",
+    "serve": "./scripts/serve.sh",
+    "serve:lan": "./scripts/serve.sh --lan",
+    "data": "./scripts/make-data.sh",
+    "test:arena": "node test/arena-test.mjs",
+    "test:matrix": "node test/arena-matrix.mjs",
+    "test:upload": "node test/upload-check.mjs",
+    "test:warehouse": "node test/run-warehouse.mjs",
+    "test:compare": "node test/run-compare.mjs"
   },
   "keywords": [],
   "author": "",
@@ -12,12 +20,16 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@duckdb/duckdb-wasm": "^1.33.1-dev118.0",
+    "@duckdb/duckdb-wasm": "1.33.1-dev118.0",
     "@electric-sql/pglite": "^0.5.16",
     "@sqlite.org/sqlite-wasm": "^3.54.1-build1",
     "apache-arrow": "^17.0.0"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "playwright": "1.61.1"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
