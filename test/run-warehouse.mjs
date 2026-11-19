@@ -9,7 +9,7 @@
  */
 import { chromium } from 'playwright';
 
-const BASE = process.env.BASE ?? 'https://10.10.10.81:8795';
+const BASE = process.env.BASE ?? 'http://127.0.0.1:8791';
 const results = [];
 const check = (name, pass, detail = '') => {
   results.push({ name, pass, detail });

@@ -1,7 +1,7 @@
 /** Runs the three-engine page under a phone-sized viewport and mobile UA. */
 import { chromium, devices } from 'playwright';
 const PORT = process.env.PORT ?? '8791';
-const url = `http://10.10.10.81:${PORT}/public/compare.html?repeat=1`;
+const url = `http://127.0.0.1:${PORT}/public/compare.html?repeat=1`;
 const b = await chromium.launch();
 const ctx = await b.newContext({ ...devices['iPhone 14'] });
 const p = await ctx.newPage();

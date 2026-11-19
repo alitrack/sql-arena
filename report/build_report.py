@@ -237,13 +237,13 @@ html = f"""<!doctype html>
 <p>
   把服务绑到 <code>0.0.0.0</code> 只解决“能不能连上”。真正卡住的是浏览器的安全上下文：
   OPFS、Web Locks、SharedArrayBuffer 只在 secure context 暴露，而
-  <code>http://localhost</code> 算 secure context，<code>http://10.10.10.81</code> 不算。
+  <code>http://localhost</code> 算 secure context，<code>http://192.168.1.50</code> 不算。
 </p>
 <table>
   <tr><th>访问方式</th><th>isSecureContext</th><th>navigator.storage (OPFS)</th><th>navigator.locks</th><th>SharedArrayBuffer</th></tr>
   <tr><td>http://localhost:8765</td><td class="pass">true</td><td class="pass">有</td><td class="pass">有</td><td class="pass">有</td></tr>
-  <tr><td>http://10.10.10.81:8765</td><td style="color:#b42318;font-weight:600">false</td><td style="color:#b42318">undefined</td><td style="color:#b42318">undefined</td><td style="color:#b42318">无</td></tr>
-  <tr><td>https://10.10.10.81:8765</td><td class="pass">true</td><td class="pass">有</td><td class="pass">有</td><td class="pass">有</td></tr>
+  <tr><td>http://192.168.1.50:8765</td><td style="color:#b42318;font-weight:600">false</td><td style="color:#b42318">undefined</td><td style="color:#b42318">undefined</td><td style="color:#b42318">无</td></tr>
+  <tr><td>https://192.168.1.50:8765</td><td class="pass">true</td><td class="pass">有</td><td class="pass">有</td><td class="pass">有</td></tr>
 </table>
 <p class="small">
   实测脚本 <code>test/lan-probe.mjs</code> / <code>test/lan-probe-tls.mjs</code>。

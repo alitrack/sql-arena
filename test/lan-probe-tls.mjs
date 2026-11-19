@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 const PORT = process.env.PORT ?? '8791';
-const url = process.env.URL ?? `https://10.10.10.81:${PORT}/public/warehouse.html`;
+const url = process.env.URL ?? `http://127.0.0.1:${PORT}/public/warehouse.html`;
 const b = await chromium.launch();
 const ctx = await b.newContext({ ignoreHTTPSErrors: true });
 const p = await ctx.newPage();

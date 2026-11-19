@@ -4,7 +4,7 @@
  */
 import { chromium } from 'playwright';
 const PORT = process.env.PORT ?? '8791';
-const BASE = process.env.BASE ?? `http://10.10.10.81:${PORT}`;
+const BASE = process.env.BASE ?? `http://127.0.0.1:${PORT}`;
 const b = await chromium.launch();
 const p = await b.newPage();
 const errs = [];

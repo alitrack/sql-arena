@@ -1,7 +1,7 @@
 /** Verifies the degraded (insecure-context) path actually works end to end. */
 import { chromium } from 'playwright';
 const PORT = process.env.PORT ?? '8791';
-const url = process.env.URL ?? `http://10.10.10.81:${PORT}/public/warehouse.html`;
+const url = process.env.URL ?? `http://127.0.0.1:${PORT}/public/warehouse.html`;
 const b = await chromium.launch();
 const p = await b.newPage();
 const errs = [];

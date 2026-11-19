@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 const b = await chromium.launch();
 const p = await b.newPage();
 const errs=[]; p.on('pageerror', e=>errs.push(e.message.slice(0,150)));
-await p.goto('http://10.10.10.81:8791/public/arena.html', {waitUntil:'load'});
+await p.goto('http://127.0.0.1:8791/public/arena.html', {waitUntil:'load'});
 await p.waitForFunction(() => !!window.__arena);
 await p.setInputFiles('#files', 'test/fixtures/sales.csv');
 await p.waitForTimeout(500);

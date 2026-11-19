@@ -107,15 +107,15 @@ node test/run-warehouse.mjs     # 10 项断言：持久化 / 迁移 / 跨标签�
 `start()` 不再抛 `Cannot read properties of undefined (reading 'request')`。
 
 **为什么持久化需要 https**：OPFS、Web Locks、SharedArrayBuffer 只在 secure context 里存在。
-`http://localhost` 算 secure context，但 `http://10.10.10.81` 不算——浏览器会直接把
+`http://localhost` 算 secure context，但 `http://192.168.1.50` 不算——浏览器会直接把
 `navigator.storage` 和 `navigator.locks` 变成 `undefined`，持久化和跨标签页锁静默失效。
 实测（`test/lan-probe.mjs`）：
 
 | 访问方式 | isSecureContext | OPFS | Web Locks | SharedArrayBuffer |
 |---|---|---|---|---|
 | http://localhost:8791 | true | ✅ | ✅ | ✅ |
-| http://10.10.10.81:8791 | **false** | ❌ | ❌ | ❌ |
-| https://10.10.10.81:8791 | true | ✅ | ✅ | ✅ |
+| http://192.168.1.50:8791 | **false** | ❌ | ❌ | ❌ |
+| https://192.168.1.50:8791 | true | ✅ | ✅ | ✅ |
 
 自签证书只需在另一台机器上点一次“继续访问”。想免警告就用
 [mkcert](https://github.com/FiloSottile/mkcert) 签一张本机 CA 证书替换 `certs/`。

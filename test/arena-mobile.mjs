@@ -3,7 +3,7 @@ const b = await chromium.launch();
 const ctx = await b.newContext({ ...devices['iPhone 14'] });
 const p = await ctx.newPage();
 const errs=[]; p.on('pageerror', e=>errs.push(e.message.slice(0,120)));
-await p.goto('http://10.10.10.81:8791/public/arena.html', {waitUntil:'load'});
+await p.goto('http://127.0.0.1:8791/public/arena.html', {waitUntil:'load'});
 await p.waitForFunction(() => !!window.__arena);
 await p.evaluate(() => window.__arena.loadDemo());
 const res = await p.evaluate(() => window.__arena.runSql(
