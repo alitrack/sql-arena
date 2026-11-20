@@ -76,6 +76,7 @@ export class LocalWarehouse {
     this.rpcSeq = 1;
     this.rpcWaiters = new Map();
     this.ready = null;
+    this.closing = false;
     /** @type {string[]} */
     this.log = [];
     /** @type {(() => Promise<any>) | null} */
@@ -132,10 +133,34 @@ export class LocalWarehouse {
         this.role = 'leader';
         this.#trace('leader: lock acquired');
         const ready = this.#openLeader().then(
-          () => settle.resolve(true),
+          async () => {
+            // destroy() may have torn this instance down while we were still
+            // opening the database (the lock callback is not awaited by
+            // start()). Return immediately so the lock callback exits and the
+            // Web Lock is released — never install a fresh `lockRelease` that
+            // destroy() has already passed. destroy()'s db teardown ran before
+            // `this.db` was assigned (it was still downloading), so terminate
+            // the half-open instance here to avoid leaking wasm memory.
+            if (this.closing) {
+              try { await this.db?.terminate(); } catch { /* already gone */ }
+              this.db = null;
+              this.conn = null;
+              settle.resolve(false);
+              return;
+            }
+            settle.resolve(true);
+          },
           (error) => settle.reject(error),
         );
         await ready;
+        // If the instance was destroyed while the database was still opening,
+        // the callback must return NOW to release the Web Lock. Falling through
+        // to the `lockRelease` await below would install a fresh release that
+        // destroy() has already passed — leaking the lock forever.
+        if (this.closing) {
+          this.#trace('lock released (destroyed during open)');
+          return;
+        }
         await new Promise((resolve) => {
           this.lockRelease = resolve;
         });
@@ -145,6 +170,13 @@ export class LocalWarehouse {
     void held.catch(() => {});
     const isLeader = await leaderReady;
     if (!isLeader) {
+      // We are mid-destroy (the callback saw `closing` and released the lock):
+      // do not demote to client or wait for a leader — the instance is going
+      // away, so just return.
+      if (this.closing) {
+        this.#trace('closed during start: lock released');
+        return this.role;
+      }
       this.role = 'client';
       this.#trace('client: leader is another tab');
       await this.#waitForLeader();
@@ -339,6 +371,7 @@ export class LocalWarehouse {
 
   /** Close connections and release the cross-tab lock. */
   async destroy() {
+    this.closing = true;
     clearTimeout(this.checkpointTimer);
     if (this.role === 'leader') {
       try {
