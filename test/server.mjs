@@ -30,6 +30,12 @@ const MIME = {
   '.data': 'application/octet-stream',
 };
 
+// The ~49 MB engine payloads are content-stable (pinned by the package versions
+// in scripts/fetch-vendor.sh), so cache them aggressively: `no-store` on every
+// response made every reload re-download the whole wasm set. The small text
+// files (HTML/JS/CSV) stay no-store so local edits show up immediately.
+const IMMUTABLE_EXT = new Set(['.wasm', '.data']);
+
 // TLS keeps `isSecureContext` true on a LAN IP, which OPFS and Web Locks both
 // require. Without it, http://<lan-ip> silently loses navigator.storage.
 const TLS = process.env.TLS === '1';
@@ -51,12 +57,13 @@ const handler = async (req, res) => {
     const info = await stat(filePath).catch(() => null);
     if (info?.isDirectory()) filePath = path.join(filePath, 'index.html');
     const body = await readFile(filePath);
+    const ext = path.extname(filePath);
     res.writeHead(200, {
-      'content-type': MIME[path.extname(filePath)] ?? 'application/octet-stream',
+      'content-type': MIME[ext] ?? 'application/octet-stream',
       'cross-origin-opener-policy': 'same-origin',
       'cross-origin-embedder-policy': 'require-corp',
       'cross-origin-resource-policy': 'cross-origin',
-      'cache-control': 'no-store',
+      'cache-control': IMMUTABLE_EXT.has(ext) ? 'public, max-age=31536000, immutable' : 'no-store',
     });
     res.end(body);
   } catch {
