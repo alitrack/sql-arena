@@ -230,8 +230,8 @@ function render(result, rowId) {
     : 'n/a';
   row.className = '';
   row.innerHTML = `
-    <td class="engine">${result.label}</td>
-    <td>${String(result.version).slice(0, 28)}</td>
+    <td class="engine">${escapeHtml(result.label)}</td>
+    <td>${escapeHtml(String(result.version).slice(0, 28))}</td>
     <td>${result.loadMs.toFixed(0)}</td>
     <td>${result.q1.ms.toFixed(0)}</td>
     <td>${result.q6.ms.toFixed(0)}</td>
@@ -243,8 +243,12 @@ function render(result, rowId) {
 function renderError(rowId, error) {
   const row = document.getElementById(rowId);
   row.className = '';
-  row.innerHTML = `<td class="engine">${rowId.replace('row-', '')}</td>`
-    + `<td colspan="7" class="err">${String(error?.message ?? error)}</td>`;
+  row.innerHTML = `<td class="engine">${escapeHtml(rowId.replace('row-', ''))}</td>`
+    + `<td colspan="7" class="err">${escapeHtml(String(error?.message ?? error))}</td>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
 async function main() {
