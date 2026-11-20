@@ -147,6 +147,10 @@ export function ddlType(type, engine) {
   if (engine === 'duckdb') {
     if (type === 'TEXT') return 'VARCHAR';
     if (type === 'TIMESTAMP') return 'TIMESTAMP';
+    // INTEGER is INT32 in DuckDB (4 bytes) but 64-bit in SQLite/PG; an 18-digit
+    // ID overflows INT32 and errors only on DuckDB. Map to BIGINT so all three
+    // engines accept the same range.
+    if (type === 'INTEGER') return 'BIGINT';
     return type;
   }
   if (engine === 'pglite') {
