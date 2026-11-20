@@ -12,7 +12,8 @@
     "test:matrix": "node test/arena-matrix.mjs",
     "test:upload": "node test/upload-check.mjs",
     "test:warehouse": "node test/run-warehouse.mjs",
-    "test:compare": "node test/run-compare.mjs"
+    "test:compare": "node test/run-compare.mjs",
+    "test:unit": "node test/result-compare.test.mjs"
   },
   "keywords": [],
   "author": "",

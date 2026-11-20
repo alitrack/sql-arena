@@ -26,9 +26,23 @@ JOIN region r ON n.n_regionkey = r.r_regionkey
 GROUP BY n.n_name, r.r_name ORDER BY orders DESC LIMIT 5`;
 
 const res = await p.evaluate((sql) => window.__arena.runSql(sql), SQL);
+const failures = [];
 for (const r of res) {
   console.log(`${r.name.padEnd(20)} ok=${r.ok} ${r.ok ? r.ms.toFixed(1)+'ms rows='+r.rows : 'ERR '+String(r.error).slice(0,80)}`);
   if (r.ok) console.log('   compare:', JSON.stringify(r.compare));
+  if (!r.ok) { failures.push(`${r.name}: engine error — ${r.error}`); continue; }
+  const cmp = r.compare;
+  if (!cmp?.equal) failures.push(`${r.name}: result disagreement ${JSON.stringify(cmp?.firstDiff ?? cmp)}`);
+  else if (cmp.orderMatches === false) failures.push(`${r.name}: row order differs ${JSON.stringify(cmp)}`);
 }
 console.log('errors:', errs.length ? errs.slice(0,3).join(' | ') : 'none');
 await b.close();
+
+// CI gate: the page is only loadable AND the three engines must agree. A
+// silent disagreement used to exit 0 — that's the whole point of this test.
+if (failures.length) {
+  console.error('\nFAILED:');
+  for (const f of failures) console.error('  - ' + f);
+  process.exit(1);
+}
+console.log('\nPASS: all engines ran and agree on the four-table join');
