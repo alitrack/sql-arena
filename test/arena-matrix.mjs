@@ -26,6 +26,10 @@ SELECT c.c_mktsegment, count(*) AS n, sum(b.total) AS rev
 FROM big b JOIN customer c ON b.o_custkey=c.c_custkey
 GROUP BY 1 ORDER BY rev DESC`,
   'date-literal': `SELECT count(*) AS n FROM lineitem WHERE l_shipdate > DATE '1998-01-01'`,
+  // Projects a bare DATE column — the shape that previously diverged across
+  // engines (DuckDB epoch-ms number vs PGlite Date vs SQLite text). With M6
+  // canonicalization all three render 'YYYY-MM-DD' and agree.
+  'date-projection': `SELECT l_shipdate, l_shipmode FROM lineitem WHERE l_orderkey = 42`,
   'cast-numeric': `SELECT sum(CAST(l_quantity AS DOUBLE) * l_extendedprice) AS v FROM lineitem`,
 };
 

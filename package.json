@@ -13,7 +13,7 @@
     "test:upload": "node test/upload-check.mjs",
     "test:warehouse": "node test/run-warehouse.mjs",
     "test:compare": "node test/run-compare.mjs",
-    "test:unit": "node test/result-compare.test.mjs"
+    "test:unit": "node test/result-compare.test.mjs && node test/warehouse-lock.test.mjs && node test/date-normalize.test.mjs"
   },
   "keywords": [],
   "author": "",

@@ -43,6 +43,12 @@ jobs:
       - name: Warehouse lock-lifecycle tests
         run: node test/warehouse-lock.test.mjs
 
+      # Cross-engine date/timestamp canonicalizer (M6): DuckDB epoch-ms numbers,
+      # PGlite Date objects and SQLite texts must render one wall-clock text.
+      # Pure logic — no wasm/browser.
+      - name: Date canonicalization tests
+        run: node test/date-normalize.test.mjs
+
       - name: Fetch wasm payloads
         run: ./scripts/fetch-vendor.sh
 

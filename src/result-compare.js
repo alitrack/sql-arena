@@ -27,12 +27,12 @@ export function normCell(value) {
   }
   if (typeof value === 'number') return { kind: 'number', value };
   if (typeof value === 'boolean') return { kind: 'boolean', value };
-  // NOTE (M6): duckdb-wasm returns DATE/TIMESTAMP columns as JS Date objects while
-  // PGlite/SQLite return 'YYYY-MM-DD' text. Comparing a Date to a date-string
-  // falls through to String() and currently disagrees. Formatting the Date to
-  // text is the right fix but needs confirmation of duckdb-wasm's convention
-  // (local vs UTC midnight) to avoid a TZ off-by-one; kept on the TODO until
-  // verified against the live engine.
+  // Dates are canonicalized upstream — each engine's run() renders its
+  // DATE/TIMESTAMP cells to UTC wall-clock text via date-normalize.js before
+  // this comparator sees them, so the three engines already agree and no Date
+  // object should reach here. This branch is a defensive fallback: fold a
+  // leaked Date to its epoch so it at least compares to a numeric carrier
+  // instead of String() (which would be a wall-clock-vs-epoch mismatch).
   if (value instanceof Date) return { kind: 'number', value: value.getTime() };
 
   const s = String(value);

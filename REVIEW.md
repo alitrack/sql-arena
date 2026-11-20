@@ -21,7 +21,31 @@
 - **m7 NaN** — `cellsEqual(NaN,NaN)` 改判相等；`maxRelDiff` 累加加 `Number.isFinite` 守卫，NaN 不再把报告字段污染成 NaN。
 - **m8 浮点 key 精度** — `rowKey` 数值 key 从 `toPrecision(12)` 改 `toPrecision(10)`，与比较容差量级对齐（纯稳健性微调，非硬 bug）。
 
-> **M6（Date 对象）保留为 TODO，未改**：duckdb-wasm 对 DATE/TIMESTAMP 列是否返回 JS Date、且是本地午夜还是 UTC 午夜，必须对活引擎确认才知道格式化方式；本地无法验证，盲目格式化会引入 TZ 偏差。已在 `normCell` 的 Date 分支留 `NOTE (M6)` 注释标出。
+### M6 诊断证据（2026-11-20，本机三引擎真跑探针得出，非推测）
+
+三引擎投影同一 `DATE '1998-09-02'` 列的**真实返回形状**：
+
+| 引擎 | DATE | TIMESTAMP | result 里的类型信息 |
+|---|---|---|---|
+| DuckDB (`toJSON`) | `number` `904694400000`（epoch 毫秒，**UTC** 午夜编码）| `number`（**UTC** 墙上时钟编码）| `schema.fields[].type.typeId`（8=DATE,10=TIMESTAMP,9=TIME,2=int64）|
+| PGlite | `Date` 对象（`getTime`=`904694400000`，与 DuckDB **同一 epoch**，同为 **UTC** 编码）| `Date`（同 epoch）| `fields[].dataTypeID`（1082=date,1114=timestamp,1083=time,20=int8）|
+| SQLite | `string` `"1998-09-02"` | `string` | **result 无类型信息**（只有值，类型只能从值形状推断）|
+
+**关键结论**：DuckDB 的 number 和 PGlite 的 Date 携带**同一个 epoch**（都按 UTC 墙上时钟编码 naive date/time），只有**载体**不同（number vs Date）；SQLite 则是**文本**。所以三者都能无损归一到同一个 UTC 墙上时钟文本，且与本机时区无关（用 `getUTC*` 渲染 epoch，而非 `getHours`——后者会按本机偏移漂移 8 小时）。
+
+比较器现状：`cellsEqual(duck,pg)=true`（都归一成 number 后相等），`cellsEqual(duck,sql)=false`、`cellsEqual(pg,sql)=false` —— **投影裸 DATE 列的查询，duck/pg 一致、俩都跟 sqlite 假分歧**，报 `firstDiff: 904694400000 vs "1998-09-02"`。专家原假设"duckdb 返回 Date 对象"是错的（实际是 number），但问题真实。
+
+## 已修复 M6 日期列跨引擎假分歧（2026-11-20，选项 a：彻底修，含 UI 一致）
+
+**修法**（每引擎 `run()` 内部归一，`run()` 签名不变，`arena.js`/`compareResults` 零改动）：
+- 新增 `src/date-normalize.js` 纯模块：`duckDateKind(typeId)` / `pgDateKind(dataTypeID)` 把各引擎 result schema 的列类型映射到 `date`/`timestamp`；`canonical(value, kind)` 把 number（DuckDB）/ Date（PGlite）/ string（SQLite）三种载体统一渲染成 **UTC 墙上时钟文本**（date→`YYYY-MM-DD`，timestamp→`YYYY-MM-DD HH:MM:SS`）；`kindFromText`/`canonicalTextIfDate` 给无类型的 SQLite 用值形状兜底。
+- `src/engines.js` 三个 adapter 的 `run()` 各按自己的 result schema 取列类型，只把**确认为日期列**的 cell 走 `canonical`——真实 `BIGINT` 列绝不经过此路径（`SELECT 904694400000 AS x` 仍是整数）。SQLite 因 result 无类型，用 `canonicalTextIfDate(v) ?? v`：非日期文本原样保留（**关键**：`?? v` 不能漏，否则每个非日期列都被置 null）。
+- 三引擎 `run()` 现在对同一 naive 日期都返回 `1998-09-02`，比较器和 UI 表格自然一致。
+
+**验证**：
+- `test/date-normalize.test.mjs` 16 断言全过（type-id 映射、三载体归一、TZ 无关性、NaN/负 epoch/小数秒、`kindFromText` 拒绝 `'42'`/`'1234'`/`'Acme, Inc'`、非日期 cell 保留原值），挂进 CI 的纯测试段 + `test:unit`。
+- 真引擎探针（本机 duckdb-node-blocking + PGlite + sqlite-wasm）：`DATE '1998-09-02'` 三引擎 `canonical` 后**同一文本** `1998-09-02`；`TIMESTAMP '...03:04:05'` 三引擎同一文本。修复前 `cellsEqual(duck,sql)`/`cellsEqual(pg,sql)`=false，修复后三引擎 equal。
+- 完整三引擎同场（含 DuckDB browser bundle）由 CI 的 `test/arena-test.mjs` 新加的 **date column projection** 用例守门（投影裸 `l_shipdate`，任一引擎编码分叉即 `exit(1)`），`test/arena-matrix.mjs` 同步加 `date-projection` 诊断项。
 
 ## 已修复 P2 工程门禁（2026-11-20）
 

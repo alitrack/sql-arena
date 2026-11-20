@@ -7,6 +7,7 @@
  * timing or correctness difference cannot come from differing column types.
  */
 import { ddlType, sqlLiteral } from './csv-schema.js';
+import { duckDateKind, pgDateKind, canonical, canonicalTextIfDate } from './date-normalize.js';
 
 /** @typedef {{ name: string, columns: { name: string, type: string }[], rows: string[][] }} Dataset */
 
@@ -74,8 +75,22 @@ export class DuckDBEngine {
     const t0 = performance.now();
     const table = await this.conn.query(sql);
     const ms = performance.now() - t0;
-    const json = table.toArray().map((r) => r.toJSON());
-    return { rows: json, columns: table.schema.fields.map((f) => f.name), ms };
+    // M6: canonicalize DATE/TIMESTAMP columns to wall-clock text so all three
+    // engines return '1998-09-02' for the same naive date. The result schema
+    // carries per-column types, so only those columns are normalized — a real
+    // BIGINT column is left untouched.
+    const fields = table.schema.fields;
+    const types = fields.map((f) => duckDateKind(f.type));
+    const json = table.toArray().map((r) => this.#canonDateRow(r.toJSON(), types));
+    return { rows: json, columns: fields.map((f) => f.name), ms };
+  }
+  #canonDateRow(row, types) {
+    if (row == null || typeof row !== 'object') return row;
+    if (Array.isArray(row)) return row.map((v, i) => (types[i] ? canonical(v, types[i]) : v));
+    const out = {};
+    let i = 0;
+    for (const [k, v] of Object.entries(row)) { out[k] = types[i] ? canonical(v, types[i]) : v; i += 1; }
+    return out;
   }
 
   async close() {
@@ -145,7 +160,21 @@ export class SQLiteEngine {
     const rows = this.db.exec(sql, { rowMode: 'object', returnValue: 'resultRows' });
     const ms = performance.now() - t0;
     const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
-    return { rows, columns, ms };
+    // M6: SQLite result rows carry no per-column types, so date columns are
+    // recognized by value shape: a DATE/TIMESTAMP cell read back through the
+    // binding is a 'YYYY-MM-DD[ HH:MM:SS]' text string, while INTEGER/DOUBLE
+    // read back as numbers. canonicalTextIfDate only rewrites string cells
+    // that match that shape, so numeric columns pass through untouched.
+    const canon = rows.map((row) => {
+      if (row == null || typeof row !== 'object') return row;
+      // canonicalTextIfDate returns null for non-date cells — keep the original
+      // value in that case so only genuine date/timestamp text is rewritten.
+      if (Array.isArray(row)) return row.map((v) => canonicalTextIfDate(v) ?? v);
+      const out = {};
+      for (const [k, v] of Object.entries(row)) out[k] = canonicalTextIfDate(v) ?? v;
+      return out;
+    });
+    return { rows: canon, columns, ms };
   }
 
   async close() {
@@ -189,7 +218,25 @@ export class PGliteEngine {
     const t0 = performance.now();
     const result = await this.pg.query(sql);
     const ms = performance.now() - t0;
-    return { rows: result.rows, columns: result.fields.map((f) => f.name), ms };
+    // M6: PGlite returns DATE/TIMESTAMP cells as JS Date objects. Match the
+    // field's dataTypeID to a kind so a DATE becomes '1998-09-02' and a
+    // TIMESTAMP becomes '1998-09-02T11:04:05' — the same wall-clock text the
+    // DuckDB and SQLite adapters produce. Non-date fields pass through.
+    const kindByName = {};
+    for (const f of result.fields) {
+      const kind = pgDateKind(f.dataTypeID);
+      if (kind) kindByName[f.name] = kind;
+    }
+    const canon = result.rows.map((row) => {
+      if (row == null || typeof row !== 'object') return row;
+      const out = {};
+      for (const [k, v] of Object.entries(row)) {
+        const kind = kindByName[k];
+        out[k] = kind ? canonical(v, kind) : v;
+      }
+      return out;
+    });
+    return { rows: canon, columns: result.fields.map((f) => f.name), ms };
   }
 
   async close() {
