@@ -115,7 +115,13 @@ export class SQLiteEngine {
         stmt.bind(ds.columns.map((c, j) => {
           const raw = (r[j] ?? '').trim();
           if (raw === '') return null;
-          if (c.type === 'INTEGER') return Number(raw);
+          if (c.type === 'INTEGER') {
+            const n = Number(raw);
+            // > 2^53 loses precision through Number(); keep the decimal text so
+            // SQLite's INTEGER affinity stores an exact 64-bit integer (DuckDB
+            // and PGlite take the same text via sqlLiteral and stay in sync).
+            return Number.isSafeInteger(n) ? n : raw;
+          }
           if (c.type === 'DOUBLE') return Number(raw);
           if (c.type === 'BOOLEAN') return /^(true|t)$/i.test(raw) ? 1 : 0;
           return raw;
