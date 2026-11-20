@@ -7,10 +7,16 @@
  */
 import http from 'node:http';
 import https from 'node:https';
+import { fileURLToPath } from 'node:url';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+// fileURLToPath (not `new URL(import.meta.url).pathname`): on Windows the
+// pathname is a leading-slash '/C:/...' that path.resolve mangles into
+// 'C:\C:\...' and every request 404s. Linux CI is unaffected (its file URLs
+// already map to absolute POSIX paths) but the lab server must also run on
+// Windows, where this project is developed.
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT ?? 8765);
 // 0.0.0.0 exposes the lab to the LAN. Only do this on a trusted network: the
 // server has no auth and serves the whole lab directory.
