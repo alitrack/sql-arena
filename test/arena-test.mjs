@@ -19,19 +19,27 @@ console.log('datasets loaded:', n);
 console.log('schema:', JSON.stringify(await p.evaluate(() => window.__arena.datasets()), null, 1).slice(0, 700));
 
 // Each case must run error-free on all three engines AND have the engines
-// agree. The join case is the original correctness gate; the date case
-// projects a bare DATE column so a per-engine encoding split (DuckDB epoch-ms
-// number vs PGlite Date vs SQLite text) would surface as a disagreement
-// unless the adapters canonicalize date/timestamp cells (M6).
+// agree. The join case is the correctness gate; the date case projects a
+// bare DATE column so a per-engine encoding split (DuckDB epoch-ms number vs
+// PGlite Date vs SQLite text) would surface as a disagreement unless the
+// adapters canonicalize date/timestamp cells (M6).
+//
+// Both ORDER BYs carry a tiebreaker on the grouping key. Without it, an
+// `ORDER BY <agg> DESC LIMIT n` is non-deterministic whenever the n-th and
+// (n+1)-th aggregate values tie — SQL does not order tied rows, so each engine
+// may return a different tied row as row n and the "engines agree" gate
+// flakes on that dataset. Tying the break to the (unique) group key makes the
+// row set fully determined; on data with no boundary tie the result is
+// identical, so this only strengthens the gate.
 const CASES = {
   'four-table join': `SELECT n.n_name AS nation, r.r_name AS region, count(*) AS orders
 FROM orders o
 JOIN customer c ON o.o_custkey = c.c_custkey
 JOIN nation n ON c.c_nationkey = n.n_nationkey
 JOIN region r ON n.n_regionkey = r.r_regionkey
-GROUP BY n.n_name, r.r_name ORDER BY orders DESC LIMIT 5`,
-  'date column projection': `SELECT l_shipdate, l_shipmode, l_returnflag
-FROM lineitem WHERE l_orderkey = 42`,
+GROUP BY n.n_name, r.r_name ORDER BY orders DESC, n.n_name LIMIT 5`,
+  'date column projection': `SELECT DISTINCT l_shipdate FROM lineitem
+ORDER BY l_shipdate LIMIT 5`,
 };
 
 const failures = [];

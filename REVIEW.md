@@ -8,7 +8,7 @@
 
 - **C1** `src/engines.js:115-122` — SQLite INTEGER 绑定改为：`Number.isSafeInteger(n) ? n : raw`，>2^53 保留十进制文本走 INTEGER 亲和。实测 sqlite-wasm 3.54.1-build1 **无 BigInt 绑定支持**（`keys with bigint: []`），旧 `Number('12345678901234567')` 存成 `...568`（丢精度），新代码存 `...567` 精确、读回 `typeof bigint` 精确。小整数（42）仍绑 number，常见路径不变。
 - **C2** `src/csv-schema.js:147-155` — `ddlType` 的 duckdb 分支把 `INTEGER` 映射为 `BIGINT`，与 pglite 对齐。实测 `inferred=INTEGER → duckdb=BIGINT / sqlite=INTEGER / pglite=BIGINT`，三家一致 64 位，消除 >2^31 只在 DuckDB 的 INT32 溢出。
-- **M7** `test/arena-test.mjs` — 四表 JOIN 测试补真断言：每个引擎断言 `ok`、`compare.equal`、`orderMatches`，任一失败 `process.exit(1)` 并打印 `firstDiff`。此前引擎报错/结果分歧只 `console.log`、进程仍 0 退出，CI 实际没在守"三引擎一致"这门。
+- **M7** `test/arena-test.mjs` — 四表 JOIN 测试补真断言：每个引擎断言 `ok`、`compare.equal`、`orderMatches`，任一失败 `process.exit(1)` 并打印 `firstDiff`。此前引擎报错/结果分歧只 `console.log`、进程仍 0 退出，CI 实际没在守"三引擎一致"这门。**另加固**：JOIN 查询的 `ORDER BY orders DESC LIMIT 5` 在 LIMIT 边界出现并列（如某数据集 GERMANY=117 并列 CHINA=117 争第 5 名）时，SQL 不保证并列行顺序，各引擎可能返回不同的并列行 → 门会 flake。本地真浏览器跑用 duckdb CLI v1.4.3 生成数据正好踩中这个 tie（CI 用 v2.0.0 采样不同、恰好无并列），暴露后给 `ORDER BY` 加 `n.n_name` 并列打破键，行集完全确定、无并列时结果不变（纯加固）。
 
 ## 已修复 P1 比较器（2026-11-20，`node test/result-compare.test.mjs` 20/20 通过，本地可跑无需 wasm）
 
@@ -46,6 +46,7 @@
 - `test/date-normalize.test.mjs` 16 断言全过（type-id 映射、三载体归一、TZ 无关性、NaN/负 epoch/小数秒、`kindFromText` 拒绝 `'42'`/`'1234'`/`'Acme, Inc'`、非日期 cell 保留原值），挂进 CI 的纯测试段 + `test:unit`。
 - 真引擎探针（本机 duckdb-node-blocking + PGlite + sqlite-wasm）：`DATE '1998-09-02'` 三引擎 `canonical` 后**同一文本** `1998-09-02`；`TIMESTAMP '...03:04:05'` 三引擎同一文本。修复前 `cellsEqual(duck,sql)`/`cellsEqual(pg,sql)`=false，修复后三引擎 equal。
 - 完整三引擎同场（含 DuckDB browser bundle）由 CI 的 `test/arena-test.mjs` 新加的 **date column projection** 用例守门（投影裸 `l_shipdate`，任一引擎编码分叉即 `exit(1)`），`test/arena-matrix.mjs` 同步加 `date-projection` 诊断项。
+- **本地真浏览器实跑**（Playwright Chromium + 修好 ROOT 的 lab server + TPC-H 数据）：`arena-test.mjs` 两例（join + date projection）三引擎 `equal:true`、`orderMatches:true`、各 5 行、`errors:none` → PASS。date projection 用例三引擎各返回 5 个不同日期且比较一致——正是修复前 `904694400000 vs "1998-09-02"` 假分歧的场景。
 
 ## 已修复 P2 工程门禁（2026-11-20）
 

@@ -17,7 +17,7 @@ FROM lineitem GROUP BY 1 ORDER BY 1`,
 FROM orders o JOIN customer c ON o.o_custkey=c.c_custkey
 JOIN nation n ON c.c_nationkey=n.n_nationkey
 JOIN region r ON n.n_regionkey=r.r_regionkey
-GROUP BY 1,2 ORDER BY 3 DESC LIMIT 5`,
+GROUP BY 1,2 ORDER BY 3 DESC, 1 LIMIT 5`,
   'window': `SELECT l_returnflag, sum(l_quantity) AS qty,
        rank() OVER (ORDER BY sum(l_quantity) DESC) AS rk
 FROM lineitem GROUP BY 1 ORDER BY rk`,
@@ -28,8 +28,9 @@ GROUP BY 1 ORDER BY rev DESC`,
   'date-literal': `SELECT count(*) AS n FROM lineitem WHERE l_shipdate > DATE '1998-01-01'`,
   // Projects a bare DATE column — the shape that previously diverged across
   // engines (DuckDB epoch-ms number vs PGlite Date vs SQLite text). With M6
-  // canonicalization all three render 'YYYY-MM-DD' and agree.
-  'date-projection': `SELECT l_shipdate, l_shipmode FROM lineitem WHERE l_orderkey = 42`,
+  // canonicalization all three render 'YYYY-MM-DD' and agree. DISTINCT +
+  // ORDER BY on the date itself gives real rows and a deterministic order.
+  'date-projection': `SELECT DISTINCT l_shipdate FROM lineitem ORDER BY l_shipdate LIMIT 5`,
   'cast-numeric': `SELECT sum(CAST(l_quantity AS DOUBLE) * l_extendedprice) AS v FROM lineitem`,
 };
 
